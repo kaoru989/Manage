@@ -28,7 +28,6 @@ export default function AddEmployeeForm({ onAddEmployee }) {
   }, []);
 
   const isValidInput = (input) => {
-    // Check for special characters, only spaces, or code snippets
     const regex = /^[a-zA-Z0-9\s]+$/;
     return regex.test(input) && input.trim().length > 0;
   };

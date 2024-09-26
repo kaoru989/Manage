@@ -1,195 +1,130 @@
-import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, FlatList, ActivityIndicator, StyleSheet, StatusBar, TouchableOpacity, Modal, TextInput,Dimensions } from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from './firebaseConfig';
-import AddEmployeeForm from './Screens/AddEmployeeForm';
-import EmployeeItem from './Screens/EmployeeItem';
-import ErrorMessage from './Screens/ErrorMessage';
-import { Icon } from 'react-native-elements';
-const { width, height } = Dimensions.get('window');
+import React, { useState, useEffect, useMemo } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import LoadingScreen from './Screens/Loading';
 
-export default function App() {
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
+import { auth, db } from './firebaseConfig';
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+// Import screens
+import LoginScreen from './Screens/LoginScreens';
+import SignupScreen from './Screens/Signup';
+import ForgotPasswordScreen from './Screens/ForgotPassword';
+import Home from './Screens/Home';
+// import AddService from './Screens/AddService';
+// import ServiceDetail from './Screens/ServiceDetail';
+// import EditService from './Screens/EditService';
+import HomeUser from './Screens/HomeUser';
+// import UserFavoriteService from './Screens/UserFavoriteService';
+// import Profile from './Screens/Profile';
 
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      const querySnapshot = await getDocs(collection(db, 'employees'));
-      const employeeList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setEmployees(employeeList);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching employees:', err);
-      setError('Failed to fetch employees. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+const Stack = createStackNavigator();
+export const AuthContext = React.createContext();
 
-  const handleAddEmployee = (newEmployee) => {
-    setEmployees(prevEmployees => [...prevEmployees, newEmployee]);
-    setModalVisible(false);
-  };
-
-  const handleUpdateEmployee = (updatedEmployee) => {
-    setEmployees(prevEmployees =>
-      prevEmployees.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
-    );
-  };
-
-  const handleDeleteEmployee = (deletedEmployeeId) => {
-    setEmployees(prevEmployees => prevEmployees.filter(emp => emp.id !== deletedEmployeeId));
-  };
-
-  const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
-
+// Stack cho admin
+function AdminStack() {
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#DFFFEC" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Manage</Text>
-      </View>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search employees..."
-          placeholderTextColor="#666666"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-          <Icon name="plus" type="feather" color="#000000" />
-        </TouchableOpacity>
-      </View>
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Employee</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Icon name="x" type="feather" color="#000000" />
-              </TouchableOpacity>
-            </View>
-            <AddEmployeeForm onAddEmployee={handleAddEmployee} />
-          </View>
-        </View>
-      </Modal>
-
-      {error && <ErrorMessage message={error} />}
-      <FlatList
-        data={filteredEmployees}
-        renderItem={({ item }) => (
-          <EmployeeItem
-            employee={item}
-            onUpdate={handleUpdateEmployee}
-            onDelete={handleDeleteEmployee}
-          />
-        )}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
-    </SafeAreaView>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={Home} />
+      {/* <Stack.Screen name="AddService" component={AddService} />
+      <Stack.Screen name="ServiceDetail" component={ServiceDetail} />
+      <Stack.Screen name="EditService" component={EditService} />
+      <Stack.Screen name="Profile" component={Profile} /> */}
+    </Stack.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#DFFFEC', // Màu nền chính
-  },
-  header: {
-    backgroundColor: '#DFFFEC', // Màu nền header
-    paddingVertical: 20,
-    alignItems: 'center',
-    elevation: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000', // Màu chữ
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF', // Màu nền ô tìm kiếm
-  },
-  addButton: {
-    marginLeft: 16,
-  },
-  listContainer: {
-    paddingHorizontal: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#DFFFEC', // Màu nền khi tải dữ liệu
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: width * 0.9,
-    maxHeight: height * 0.7,
-    backgroundColor: '#FFFFFF', // Màu nền modal
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000', // Màu chữ modal
-  },
-});
+// Stack cho user thông thường
+function UserStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeUser" component={HomeUser} />
+      {/* <Stack.Screen name="UserFavoriteService" component={UserFavoriteService} />
+      <Stack.Screen name="ServiceDetail" component={ServiceDetail} />
+      <Stack.Screen name="Profile" component={Profile} /> */}
+    </Stack.Navigator>
+  );
+}
+
+// Stack cho người dùng chưa đăng nhập
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Điều hướng chính dựa trên trạng thái đăng nhập và vai trò
+function RootNavigator() {
+  const { user, userRole } = React.useContext(AuthContext); // Sử dụng useContext mà không có điều kiện
+  
+  if (user == null) {
+    return <AuthStack />;  // Hiển thị màn hình xác thực nếu chưa đăng nhập
+  }
+
+  // Hiển thị stack theo vai trò người dùng
+  return userRole === 'admin' ? <AdminStack /> : <UserStack />;
+}
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [loading, setLoading] = useState(true); // Thêm loading state
+
+  useEffect(() => {
+    // Lắng nghe thay đổi xác thực
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        setUser(authUser);  // Đặt thông tin người dùng
+        const userDocRef = doc(db, 'user', authUser.uid); // Lấy thông tin user từ Firestore
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          setUserRole(userData?.role);  // Đặt vai trò của người dùng
+        }
+      } else {
+        setUser(null);
+        setUserRole(null);  // Đặt lại trạng thái nếu không có người dùng
+      }
+      setLoading(false); // Kết thúc trạng thái chờ
+    });
+  
+    return () => unsubscribe(); // Cleanup listener khi component unmount
+  }, []);
+
+  const authContext = useMemo(
+    () => ({
+      signIn: async (user, userRole) => {
+        setUser(user);
+        setUserRole(userRole);
+      },
+      signOut: () => {
+        setUser(null);
+        setUserRole(null);
+      },
+      user,
+      userRole,
+    }),
+    [user, userRole] // Thêm các dependencies vào useMemo
+  );
+
+  // Di chuyển điều kiện loading vào trong phần JSX
+  return (
+    <AuthContext.Provider value={authContext}>
+      <NavigationContainer>
+        {loading ? (
+          <LoadingScreen />  // Hiển thị màn hình chờ nếu đang loading
+        ) : (
+          <RootNavigator />  // Điều hướng chính sau khi load xong
+        )}
+      </NavigationContainer>
+    </AuthContext.Provider>
+  );
+}
+
+
+export default App;
